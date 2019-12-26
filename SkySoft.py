@@ -1,10 +1,6 @@
 #__auth__:"Sky lu"
 # -*- coding:utf-8 -*-
 
-#__auth__:"Sky lu"
-# -*- coding:utf-8 -*-
-
-
 import requests,re
 import os,sys,json,time
 
