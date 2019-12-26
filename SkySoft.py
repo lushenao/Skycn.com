@@ -13,6 +13,7 @@ class Skysoft(object):
     def __init__(self,search_name):
         self.search_name = search_name
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        self.count = 0
 
     def req_text(self): #利用post获取搜索结果的html文本
         url = ('http://www.skycn.com/s.php')
@@ -79,10 +80,6 @@ class Skysoft(object):
                 soft_icon = re.findall(r'imgsrc="(.*?)"alt="', i)
                 #print(soft_icon)
                 soft_icon = " ".join(str(i) for i in soft_icon).replace(' ', '')
-
-
-
-
             except Exception as e:
                 #print(e)
                 continue
@@ -94,34 +91,43 @@ class Skysoft(object):
             soft_dict['图标下载链接'] = str(soft_icon)
             f.writelines(json.dumps(soft_dict, ensure_ascii=False) + '\n')
             f.close()
+            self.count += 1
             print('\033[32;1m%s软件信息爬取完成...\033[0m' % (soft_name))
 
 
-
-
-
     def download(self):
+        soft_count = 0
         req_text = self.req_text()
         #print(req_text)
         page_total = self.page_total()
         soft_list = str(req_text).split('<divclass="list-con">') #根据软件分割文本
+        if os.path.isfile(self.BASE_DIR + '/' + search_name + '.json'):  #当前目录已存在同名json文件，即删除
+            os.remove(self.BASE_DIR + '/' + search_name + '.json')
         if int(page_total) == 1: #当搜索结果页面只有一页时
             self.soft_info(soft_list)
-            print('\033[32;1m所有软件爬取完成,文件保存在\n\033[36;1m%s\n\033[32;1m目录下\033[0m' % (self.BASE_DIR))
-        if os.path.isfile(self.BASE_DIR + '/' + search_name + '.json'):
-            os.remove(self.BASE_DIR + '/' + search_name + '.json')
-        self.soft_info(soft_list)
-        for page in range(2,int(page_total)+1):
-            r_get_text = self.req_text_get(page)
-            #print(r_get_text)
-            soft_list = str(r_get_text).split('<divclass="list-con">')  # 以video的项目模型为分界分割html文本
+        else:
             self.soft_info(soft_list)
-            print('\033[32;1m所有软件爬取完成,文件保存在\n\033[36;1m%s\n\033[32;1m目录下\033[0m' % (self.BASE_DIR))
+            for page in range(2,int(page_total)+1):
+                r_get_text = self.req_text_get(page)
+                #print(r_get_text)
+                soft_list = str(r_get_text).split('<divclass="list-con">')  # 以video的项目模型为分界分割html文本
+                self.soft_info(soft_list)
+        ending = '''
+\033[34;1m
+-----------------爬取结束-----------------
+\033[32;1m在Skycn.com网站,搜索关键字[%s]一共爬取了[%s]个软件！\033[0m
+        ''' % (self.search_name,self.count)
+        print(ending)
+        print('\033[32;1m文件保存在:\n\033[36;1m%s\n\033[32;1m\033[0m' % (self.BASE_DIR))
 
 
 
 if __name__ == '__main__':
     while True:
+        title = '''\033[34;1m
+---Skycn.com网站爬取工具---\033[0m
+        '''
+        print(title)
         search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车)：\033[0m')
         #pages = input('\033[32;1m您想要爬取总页数？\n\033[37;1m(输入完毕请按回车)：\033[0m')
         Skysoft(search_name).download()
