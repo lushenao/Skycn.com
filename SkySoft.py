@@ -6,7 +6,7 @@
 
 
 import requests,re
-import os,sys,json
+import os,sys,json,time
 
 
 class Skysoft(object):
@@ -83,7 +83,7 @@ class Skysoft(object):
             except Exception as e:
                 #print(e)
                 continue
-            f = open(self.BASE_DIR + '/' + search_name + '.json', 'a')
+            f = open(self.BASE_DIR + '/' + self.search_name + '.json', 'a')
             soft_dict['软件名称'] = str(soft_name)
             soft_dict['软件页面链接'] = str(soft_links)
             soft_dict['下载链接'] = str(soft_dl_links)
@@ -100,9 +100,13 @@ class Skysoft(object):
         req_text = self.req_text()
         #print(req_text)
         page_total = self.page_total()
+        enter = input('\033[32;1m一共搜索到%s页结果，请按任意键继续！\n\033[37;1m(取消搜索请按Q)：\033[0m\033[0m' % page_total).strip()
+        if enter == 'Q':
+            start()
+        start_time = time.time()
         soft_list = str(req_text).split('<divclass="list-con">') #根据软件分割文本
-        if os.path.isfile(self.BASE_DIR + '/' + search_name + '.json'):  #当前目录已存在同名json文件，即删除
-            os.remove(self.BASE_DIR + '/' + search_name + '.json')
+        if os.path.isfile(self.BASE_DIR + '/' + self.search_name + '.json'):  #当前目录已存在同名json文件，即删除
+            os.remove(self.BASE_DIR + '/' + self.search_name + '.json')
         if int(page_total) == 1: #当搜索结果页面只有一页时
             self.soft_info(soft_list)
         else:
@@ -112,24 +116,39 @@ class Skysoft(object):
                 #print(r_get_text)
                 soft_list = str(r_get_text).split('<divclass="list-con">')  # 以video的项目模型为分界分割html文本
                 self.soft_info(soft_list)
+        end_time = time.time()
+        spend_time = end_time-start_time
         ending = '''
 \033[34;1m
 -----------------爬取结束-----------------
-\033[32;1m在Skycn.com网站,搜索关键字[%s]一共爬取了[%s]个软件！\033[0m
-        ''' % (self.search_name,self.count)
+\033[32;1m在Skycn.com网站,搜索关键字[%s]一共爬取了[%s]个软件！
+
+总共花费的时间是%s s
+
+\033[32;1m文件保存在:\n\033[36;1m%s\n\033[34;1m
+-----------------爬取结束-----------------\033[0m
+        ''' % (self.search_name,self.count,round(spend_time,2),self.BASE_DIR)
         print(ending)
-        print('\033[32;1m文件保存在:\n\033[36;1m%s\n\033[32;1m\033[0m' % (self.BASE_DIR))
 
 
 
-if __name__ == '__main__':
+def start():
     while True:
         title = '''\033[34;1m
 ---Skycn.com网站爬取工具---\033[0m
         '''
         print(title)
-        search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车)：\033[0m')
+        search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请按Q)：\033[0m').strip()
+        if len(search_name) == 0:
+            print('\033[31;1m请输入关键字!')
+            continue
+        if search_name == 'Q':
+            break
         #pages = input('\033[32;1m您想要爬取总页数？\n\033[37;1m(输入完毕请按回车)：\033[0m')
         Skysoft(search_name).download()
+
+if __name__ == '__main__':
+    start()
+
 
 
