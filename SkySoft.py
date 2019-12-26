@@ -1,11 +1,18 @@
 #__auth__:"Sky lu"
 # -*- coding:utf-8 -*-
+import gevent
+from gevent import monkey
+monkey.patch_all()
 
 import requests,re
 import os,sys,json,time
 
 
+
 class Skysoft(object):
+
+
+
     def __init__(self,search_name):
         self.search_name = search_name
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -88,7 +95,13 @@ class Skysoft(object):
             f.writelines(json.dumps(soft_dict, ensure_ascii=False) + '\n')
             f.close()
             self.count += 1
-            print('\033[32;1m%s软件信息爬取完成...\033[0m' % (soft_name))
+            #print('\033[32;1m%s软件信息爬取完成...\033[0m' % (soft_name))
+
+    def soft_next_info(self,page):
+        r_get_text = self.req_text_get(page)
+        # print(r_get_text)
+        soft_list = str(r_get_text).split('<divclass="list-con">')
+        self.soft_info(soft_list)
 
 
     def download(self):
@@ -96,7 +109,7 @@ class Skysoft(object):
         req_text = self.req_text()
         #print(req_text)
         page_total = self.page_total()
-        enter = input('\033[32;1m一共搜索到%s页结果，请按任意键继续！\n\033[37;1m(取消搜索请按Q)：\033[0m\033[0m' % page_total).strip()
+        enter = input('\033[32;1m一共搜索到%s页结果，请按任意键继续！\n\033[37;1m(取消搜索请输入Q)：\033[0m\033[0m' % page_total).strip()
         if enter == 'Q':
             start()
         start_time = time.time()
@@ -106,12 +119,10 @@ class Skysoft(object):
         if int(page_total) == 1: #当搜索结果页面只有一页时
             self.soft_info(soft_list)
         else:
-            self.soft_info(soft_list)
-            for page in range(2,int(page_total)+1):
-                r_get_text = self.req_text_get(page)
-                #print(r_get_text)
-                soft_list = str(r_get_text).split('<divclass="list-con">')  # 以video的项目模型为分界分割html文本
-                self.soft_info(soft_list)
+            self.soft_info(soft_list) #获取第一页搜索结果
+            threads = [gevent.spawn(self.soft_next_info, page) for page in range(2, int(page_total) + 1)] #将每一页开启一个协程去下载
+            #self.soft_info(soft_list)
+            gevent.joinall(threads)#协程下载每个页面的搜索结果
         end_time = time.time()
         spend_time = end_time-start_time
         ending = '''
@@ -134,7 +145,7 @@ def start():
 ---Skycn.com网站爬取工具---\033[0m
         '''
         print(title)
-        search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请按Q)：\033[0m').strip()
+        search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请输入Q)：\033[0m').strip()
         if len(search_name) == 0:
             print('\033[31;1m请输入关键字!')
             continue
