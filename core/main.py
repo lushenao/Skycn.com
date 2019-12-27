@@ -34,19 +34,19 @@ class DoMysql(object):
     #插入一条数据
     def insert_one(self,sql):
         result = self.cursor.execute(sql)
-        self.conn.commit()
+        #self.conn.commit()
         return result
 
     #插入多条数据
     def insert_many(self,sql,datas):
         result = self.cursor.executemany(sql,datas)
-        self.conn.commit()
+        #self.conn.commit()
         return result
 
     #更新数据
     def update(self,sql):
         result = self.cursor.execute(sql)
-        self.conn.commit()
+        #self.conn.commit()
         return result
 
     #关闭连接
@@ -224,6 +224,7 @@ class Skycn_soft(object):
             mysql.conn.rollback()
             print('\033[31;1mFailed:\033[0m',e)
         finally:
+            mysql.conn.commit()
             author_id = mysql.cursor.lastrowid
         self.save_soft_info(author_id)
 
@@ -234,13 +235,18 @@ class Skycn_soft(object):
         mysql = DoMysql()
         f = open(self.BASE_DIR + '/db/' + self.search_name + '.json', 'r')
         soft_count = 1
-        for i in f.readlines():
-            i = json.loads(i)
-            sql = '''insert into `soft_info`(`keyword_id`,`soft_name`,`soft_link`,`soft_download-url`,`soft_desc`,`soft_icon_url`) values('%s','%s','%s','%s','%s','%s')''' % (author_id,i['软件名称'],i['软件页面链接'],i['下载链接'],i['软件描述'],i['图标下载链接'])
-            mysql.insert_one(sql)
-            self.progress_bar(soft_count,self.count)
-            soft_count += 1
-
+        try:
+            for i in f.readlines():
+                i = json.loads(i)
+                sql = '''insert into `soft_info`(`keyword_id`,`soft_name`,`soft_link`,`soft_download-url`,`soft_desc`,`soft_icon_url`) values('%s','%s','%s','%s','%s','%s')''' % (author_id,i['软件名称'],i['软件页面链接'],i['下载链接'],i['软件描述'],i['图标下载链接'])
+                mysql.insert_one(sql)
+                self.progress_bar(soft_count,self.count)
+                soft_count += 1
+        except Exception as e:
+            mysql.conn.rollback()
+            print('\033[31;1mFailed:\033[0m',e)
+        finally:
+            mysql.conn.commit()
 
         print('\033[33;1m\n数据库上传成功!\033[0m')
         mysql.close()
