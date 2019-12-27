@@ -1,23 +1,88 @@
 #__auth__:"Sky lu"
 # -*- coding:utf-8 -*-
+
 import gevent
 from gevent import monkey
 monkey.patch_all()
 
 import requests,re
-import os,sys,json,time,math
+import os,sys,json,time,math,datetime
+
+from conf import settings
 import pymysql
 
+class DoMysql(object):
+    def __init__(self):
+        #创建连接
+        self.conn = pymysql.Connect(
+          host = settings.DATABASE_mysql['host'],
+          port = settings.DATABASE_mysql['port'],
+          user = settings.DATABASE_mysql['user'],
+          password = settings.DATABASE_mysql['pwd'],
+          db = settings.DATABASE_mysql['db'],
+          charset = 'utf8',
+          cursorclass = pymysql.cursors.DictCursor  #以字典的形式返回数据
+        )
+        #获取游标
+        self.cursor = self.conn.cursor()
+
+    #返回多条数据
+    def fetchAll(self,sql):
+        self.cursor.execute(sql)
+        return self.cursor.fetchall()
+
+    #插入一条数据
+    def insert_one(self,sql):
+        result = self.cursor.execute(sql)
+        self.conn.commit()
+        return result
+
+    #插入多条数据
+    def insert_many(self,sql,datas):
+        result = self.cursor.executemany(sql,datas)
+        self.conn.commit()
+        return result
+
+    #更新数据
+    def update(self,sql):
+        result = self.cursor.execute(sql)
+        self.conn.commit()
+        return result
+
+    #关闭连接
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
+
+class Start(object):
+    def run(self):
+        exit_flag = False
+        while True:
+            title = '''\033[34;1m
+---Skycn.com网站爬取工具---\033[0m
+            '''
+            print(title)
+            search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请输入Q)：\033[0m').strip()
+            if len(search_name) == 0:
+                print('\033[31;1m请输入关键字!')
+                continue
+            if search_name == 'Q':
+                break
+            #pages = input('\033[32;1m您想要爬取总页数？\n\033[37;1m(输入完毕请按回车)：\033[0m')
+            Skycn_soft(search_name).download()
 
 
 
-class Skysoft(object):
 
 
+
+
+
+class Skycn_soft(object):
 
     def __init__(self,search_name):
         self.search_name = search_name
-        self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        self.BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.count = 0
 
 
@@ -89,7 +154,7 @@ class Skysoft(object):
             except Exception as e:
                 #print(e)
                 continue
-            f = open(self.BASE_DIR + '/' + self.search_name + '.json', 'a')
+            f = open(self.BASE_DIR + '/db/' + self.search_name + '.json', 'a')
             soft_dict['软件名称'] = str(soft_name)
             soft_dict['软件页面链接'] = str(soft_links)
             soft_dict['下载链接'] = str(soft_dl_links)
@@ -115,11 +180,11 @@ class Skysoft(object):
         page_total = self.page_total()
         enter = input('\033[32;1m一共搜索到%s页结果，请按任意键继续！\n\033[37;1m(取消搜索请输入Q)：\033[0m\033[0m' % page_total).strip()
         if enter == 'Q':
-            start()
+            Start.run(self)
         start_time = time.time()
         soft_list = str(req_text).split('<divclass="list-con">') #根据软件分割文本
-        if os.path.isfile(self.BASE_DIR + '/' + self.search_name + '.json'):  #当前目录已存在同名json文件，即删除
-            os.remove(self.BASE_DIR + '/' + self.search_name + '.json')
+        if os.path.isfile(self.BASE_DIR + '/db/' + self.search_name + '.json'):  #当前目录已存在同名json文件，即删除
+            os.remove(self.BASE_DIR + '/db/' + self.search_name + '.json')
         if int(page_total) == 1: #当搜索结果页面只有一页时
             self.soft_info(soft_list)
         else:
@@ -131,45 +196,80 @@ class Skysoft(object):
         spend_time = end_time-start_time
         ending = '''
 \033[34;1m
------------------爬取结束-----------------
-\033[32;1m在Skycn.com网站,搜索关键字[%s]一共爬取了[%s]个软件！
+--------------------爬取结束--------------------
+\033[32;1m在[Skycn.com]网站,搜索关键字[%s]一共爬取了[%s]个软件！
 
 总共花费的时间是%s s
 
 \033[32;1m文件保存在:\n\033[36;1m%s\n\033[34;1m
------------------爬取结束-----------------\033[0m
-        ''' % (self.search_name,self.count,round(spend_time,2),self.BASE_DIR)
+--------------------爬取结束--------------------\n
+\033[0m
+        ''' % (self.search_name,self.count,round(spend_time,2),self.BASE_DIR + '/db/')
         print(ending)
 
-
-class Mysql(object):
-    def __init__(self):
-        self.mysql_addr = mysql_addr
-        self.mysql_user = mysql_user
-        self.mysql_pwd = mysql_pwd
-        self.mysql_db = mysql_db
+        input_option = input('\033[32;1m是否将爬取的到软件信息保存至数据库？\n\033[37;1m(确认请输入Y,退出程序请输入Q)：\033[0m').strip()
+        if input_option == 'Q':
+            Start.run(self)
+        elif input_option == 'Y':
+            self.save_search_info()
 
 
+    def save_search_info(self):
+        mysql = DoMysql()
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sql = '''insert into `keywords`(`key`,`result_num`,`search_time`) values('%s','%s','%s')''' % (self.search_name,self.count,time)
+        try:
+            mysql.insert_one(sql)
+        except Exception as e:
+            mysql.conn.rollback()
+            print('\033[31;1mFailed:\033[0m',e)
+        finally:
+            author_id = mysql.cursor.lastrowid
+        self.save_soft_info(author_id)
 
 
 
 
-def start():
-    while True:
-        title = '''\033[34;1m
----Skycn.com网站爬取工具---\033[0m
+    def save_soft_info(self,author_id):
+        mysql = DoMysql()
+        f = open(self.BASE_DIR + '/db/' + self.search_name + '.json', 'r')
+        soft_count = 1
+        for i in f.readlines():
+            i = json.loads(i)
+            sql = '''insert into `soft_info`(`keyword_id`,`soft_name`,`soft_link`,`soft_download-url`,`soft_desc`,`soft_icon_url`) values('%s','%s','%s','%s','%s','%s')''' % (author_id,i['软件名称'],i['软件页面链接'],i['下载链接'],i['软件描述'],i['图标下载链接'])
+            mysql.insert_one(sql)
+            self.progress_bar(soft_count,self.count)
+            soft_count += 1
+
+
+        print('\033[33;1m\n数据库上传成功!\033[0m')
+        mysql.close()
+
+    def progress_bar(self,portion, total):
         '''
-        print(title)
-        search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请输入Q)：\033[0m').strip()
-        if len(search_name) == 0:
-            print('\033[31;1m请输入关键字!')
-            continue
-        if search_name == 'Q':
-            break
-        #pages = input('\033[32;1m您想要爬取总页数？\n\033[37;1m(输入完毕请按回车)：\033[0m')
-        Skysoft(search_name).download()
+        进度条
+        :param portion: 已经传输的数据量
+        :param total: 总共的数据量
+        :return:
+        '''
+        part = total/50
+        count = math.ceil(portion / part)
+        sys.stdout.write('\033[32;1m\r[%-50s] %.2f%%\033[0m' % (('#' * count),portion/total*100))
+        sys.stdout.flush()
 
-if __name__ == '__main__':
-    start()
+        if portion >= total:
+            sys.stdout.write('\n')
+            return True
+
+
+
+
+
+
+
+
+
+
+
 
 
