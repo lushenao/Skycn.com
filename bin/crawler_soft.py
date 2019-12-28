@@ -10,7 +10,9 @@ sys.path.append(BASE_DIR)
 
 from core import main
 
-
+'''
+爬虫程序主入口
+'''
 if __name__ == '__main__':
     start = main.Start()
     start.run()
