@@ -8,6 +8,7 @@ import requests,re
 import os,json,time,datetime
 from src.progress_bar import ProgressBar
 from src.mymysql import DoMysql
+from core import main
 
 
 
@@ -28,34 +29,36 @@ class Skycn_soft(object):
         d = {'key': str(self.search_name)}
         r = requests.post(url, data=d)
         r_text = r.text.replace(' ', '')
-        # 按行读取文本，然后去除换行符
-        f = open(self.search_name + '.txt', 'w')
-        f.write(r_text)
-        f.close()
-        r_new_text = ''
-        f = open(self.search_name + '.txt', 'r')
-        for line in f.readlines():
-            line = line.strip('\n')
-            r_new_text += line
-        f.close()
-        os.remove(self.search_name + '.txt')
+        # # 按行读取文本，然后去除换行符
+        # f = open(self.search_name + '.txt', 'w')
+        # f.write(r_text)
+        # f.close()
+        # r_new_text = ''
+        # f = open(self.search_name + '.txt', 'r')
+        # for line in f.readlines():
+        #     line = line.strip('\n')
+        #     r_new_text += line
+        # f.close()
+        # os.remove(self.search_name + '.txt')
+        r_new_text = r_text.replace('\r', '').replace('\n', '')
         return r_new_text
 
     def req_text_get(self,page): #利用get获取搜索结果第二页以后的html文本
         url = (r'http://www.skycn.com/index.php?ct=search&ac=softsea&key=%s&page=%s' % (self.search_name,page))
         r = requests.get(url)
         r_text = r.text.replace(' ', '')
-        # 按行读取文本，然后去除换行符
-        f = open(self.search_name + '.txt', 'w')
-        f.write(r_text)
-        f.close()
-        r_get_text = ''
-        f = open(self.search_name + '.txt', 'r')
-        for line in f.readlines():
-            line = line.strip('\n')
-            r_get_text += line
-        f.close()
-        os.remove(self.search_name + '.txt')
+        # # 按行读取文本，然后去除换行符
+        # f = open(self.search_name + '.txt', 'w')
+        # f.write(r_text)
+        # f.close()
+        # r_get_text = ''
+        # f = open(self.search_name + '.txt', 'r')
+        # for line in f.readlines():
+        #     line = line.strip('\n')
+        #     r_get_text += line
+        # f.close()
+        # os.remove(self.search_name + '.txt')
+        r_get_text = r_text.replace('\r', '').replace('\n', '')
         return r_get_text
 
     def page_total(self): #获取搜索道德总页数
@@ -117,7 +120,7 @@ class Skycn_soft(object):
         page_total = self.page_total()
         enter = input('\033[32;1m一共搜索到%s页结果，请按任意键继续！\n\033[37;1m(取消搜索请输入Q)：\033[0m\033[0m' % page_total).strip()
         if enter == 'Q':
-            Start.run(self)
+            main.Start.run(self)
         start_time = time.time()
         soft_list = str(req_text).split('<divclass="list-con">') #根据软件分割文本
         if os.path.isfile(self.BASE_DIR + '/db/' + self.search_name + '.json'):  #当前目录已存在同名json文件，即删除
@@ -146,7 +149,7 @@ class Skycn_soft(object):
 
         input_option = input('\033[32;1m是否将爬取的到软件信息保存至数据库？\n\033[37;1m(确认请输入Y,退出程序请输入Q)：\033[0m').strip()
         if input_option == 'Q':
-            Start.run(self)
+            main.Start.run(self)
         elif input_option == 'Y':
             self.save_search_info()
 
@@ -185,7 +188,7 @@ class Skycn_soft(object):
             print('\033[31;1mFailed:\033[0m',e)
         finally:
             mysql.conn.commit()
-            print('\033[33;1m\n数据库上传成功!\033[0m')
+            print('\033[33;1m\n关键字软件信息上传成功!\033[0m')
 
-
+        f.close()
         mysql.close()

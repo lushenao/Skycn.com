@@ -20,3 +20,14 @@ DATABASE_mysql = {
     'file_path': '%s/db' % BASE_DIR
 }
 
+soft_desc = {
+    '`soft_size`':'',
+    '`soft_version`':'',
+    '`soft_update_time`':'',
+    '`soft_operating_system_bit`':'',
+    '`soft_language`':'',
+    '`soft_auth`':'',
+    '`soft_operating_system`':'',
+    '`soft_comment`':''
+}
+
