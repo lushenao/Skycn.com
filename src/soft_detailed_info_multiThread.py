@@ -5,7 +5,10 @@ from conf import settings
 from src.mymysql import DoMysql
 from src.dict_to_mysql_update_value import dicttomysqlupdate
 from src.progress_bar import ProgressBar
-import time
+from DBUtils.PooledDB import PooledDB
+import pymysql
+from queue import Queue
+import threading,time
 
 class SoftDetailedInfo(object):
     def __init__(self,search_name):
@@ -13,26 +16,55 @@ class SoftDetailedInfo(object):
         self.search_name = search_name
         self.soft_desc = settings.soft_desc
 
-
+    def mysql_conn(self):
+        '''
+        定义mysql连接信息
+        :return: 返回mysql连接池
+        '''
+        maxconn = 80
+        pool = PooledDB(
+            pymysql,
+            maxconn,
+            host='47.101.179.8',
+            user='softsdown',
+            port=3306,
+            passwd='softsdown',
+            db='softsdown',
+            use_unicode=True
+        )
+        return pool
     def get_soft_info(self):
-        mysql = DoMysql()
+        '''
+        定义多线程任务
+        :return:
+        '''
+        q = Queue(maxsize=80) #定义最大队列，必须小于mysql最大连接池数
+        mysql = self.mysql_conn()
         f = open(self.BASE_DIR + '/db/' + self.search_name + '.json', 'r')
         count = 0
         f_list = f.readlines()
         total = len(f_list)
-        thread_list = []
 
-        #print(total)
-        # for i in f_list:
-        #     self.update_soft_info(i,mysql)
-        #     count += 1
-        #     ProgressBar(count, total).run()
         while f_list:
-            i = f_list.pop()
-            self.update_soft_info(i, mysql)
-            count += 1
-            ProgressBar(count, total).run()
+            f_list_line = f_list.pop() #从列表中弹出数据
+            # self.update_soft_info(i, mysql)
 
+            t = threading.Thread(target=self.update_soft_info,args=(f_list_line, mysql,)) #弹出的每条数据开启一个线程
+            q.put(t) #将线程加入队列
+            if (q.full() == True) or (len(f_list)==0) : #当队列满了或者列表中无数据了
+                thread_list = [] #建立线程池
+                while q.empty() == False: #当队列不为空时
+                    t = q.get() #从队列中拿出一个线程
+                    q.task_done()
+                    thread_list.append(t) #将线程加入线程池
+                    t.start() #开启线程
+                    count += 1
+                    ProgressBar(count, total).run()  # 进度条
+                for t in thread_list:
+                    t.join()
+            #print('第%s个线程启动完毕...' % count)
+        mysql.close()
+        f.close()
 
 
 
@@ -65,24 +97,29 @@ class SoftDetailedInfo(object):
         # sql = 'INSERT INTO {table}({keys}) VALUES ({values}） WHERE `soft_name = {soft_name}`)'.format(table=table, keys=keys, values=values, soft_name=soft_name)
         sql = "UPDATE %s SET %s where `soft_name` = '%s'" % (table, value, soft_name)
         # print(sql)
+        con = mysql.connection()
+        cur = con.cursor()
         try:
-            mysql.insert_one(sql)
+            cur.execute(sql)
+            con.commit()
             # print('Successful')
 
         except Exception as e:
             print('Failed', e)
-            mysql.conn.rollback()
-        # finally:
-        #     count += 1
-        #     ProgressBar(count, total).run()
+            con.rollback()
+        finally:
+            cur.close()
+            con.close()
+
 
 
 
 
 start_time = time.time()
-SoftDetailedInfo('qq').tast()
+SoftDetailedInfo('qq').get_soft_info()
 stop_time = time.time()
 print(stop_time - start_time)
+
 
 
 
