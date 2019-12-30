@@ -26,11 +26,11 @@ class SoftDetailedInfo(object):
         pool = PooledDB(
             pymysql,
             maxconn,
-            host='',
-            user='',
+            host='47.101.179.8',
+            user='softsdown',
             port=3306,
-            passwd='',
-            db='',
+            passwd='softsdown',
+            db='softsdown',
             use_unicode=True
         )
         return pool
@@ -118,10 +118,10 @@ class SoftDetailedInfo(object):
 
 
 
-start_time = time.time()
-SoftDetailedInfo('qq').get_soft_info()
-stop_time = time.time()
-print(stop_time - start_time)
+# start_time = time.time()
+# SoftDetailedInfo('qq').get_soft_info()
+# stop_time = time.time()
+# print(stop_time - start_time)
 
 
 
