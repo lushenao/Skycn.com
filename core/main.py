@@ -16,6 +16,9 @@ class Start(object):
     '''
     start函数，输入关键字开始爬软件信息
     '''
+    def __init__(self):
+        self.BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     def run(self):
         exit_flag = False
         while True:
@@ -23,25 +26,31 @@ class Start(object):
 --------------Skycn.com网站爬取工具--------------\033[0m
             '''
             print(title)
-            search_name = input('\033[32;1m您想要搜索的软件关键字是？\n\033[37;1m(输入完毕请按回车,退出程序请输入Q)：\033[0m').strip()
+            search_name = input('\033[32;1m请输入你想要搜索的关键字列表的文件名，要确保在conf目录下\n\033[37;1m(输入完毕请按回车,退出程序请输入Q)：\033[0m').strip()
             if len(search_name) == 0:
                 print('\033[31;1m请输入关键字!')
                 continue
             if search_name == 'Q':
                 break
             #pages = input('\033[32;1m您想要爬取总页数？\n\033[37;1m(输入完毕请按回车)：\033[0m')
-            Skycn_soft(search_name).download()
-            print('\033[32;1m\n正在上传每个软件的详细信息至数据库...\033[0m')
-            SoftDetailedInfo(search_name).get_soft_info()
-            ending = '''
-            \033[35;1m
+
+            f = open(self.BASE_DIR + '/conf/' + search_name , 'r')
+            search_name = f.readline()
+            while search_name:
+                print('关键字为',search_name)
+                Skycn_soft(search_name).download()
+                print('\033[32;1m\n正在上传每个软件的详细信息至数据库...\033[0m')
+                SoftDetailedInfo(search_name).get_soft_info()
+                ending = '''
+                \033[35;1m
 -----------------上传至数据库结束-----------------\n\033[32;1m 
               所有信息上传数据库成功！\n
                     谢谢使用！\n
 \033[35;1m-----------------上传至数据库结束-----------------\n
 \033[0m
-            '''
-            print(ending)
+                '''
+                print(ending)
+                search_name = f.readline()
 
 
 
