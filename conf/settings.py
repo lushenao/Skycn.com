@@ -11,11 +11,11 @@ sys.path.append(BASE_DIR)
 '''
 DATABASE_mysql = {
     'engine':'mysql',
-    'host': '47.101.179.8',
-    'port': 3306,
-    'user': 'softsdown',
-    'pwd': 'softsdown',
-    'db': 'softsdown',
+    'host': '',
+    'port': '',
+    'user': '',
+    'pwd': '',
+    'db': '',
     'file_path': '%s/db' % BASE_DIR
 }
 
