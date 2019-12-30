@@ -16,20 +16,21 @@ class SoftDetailedInfo(object):
         self.search_name = search_name
         self.soft_desc = settings.soft_desc
 
+
     def mysql_conn(self):
         '''
         定义mysql连接信息
         :return: 返回mysql连接池
         '''
-        maxconn = 80
+        maxconn = 50
         pool = PooledDB(
             pymysql,
             maxconn,
-            host='47.101.179.8',
-            user='softsdown',
+            host='',
+            user='',
             port=3306,
-            passwd='softsdown',
-            db='softsdown',
+            passwd='',
+            db='',
             use_unicode=True
         )
         return pool
@@ -38,7 +39,8 @@ class SoftDetailedInfo(object):
         定义多线程任务
         :return:
         '''
-        q = Queue(maxsize=80) #定义最大队列，必须小于mysql最大连接池数
+        maxsize = 45
+        q = Queue(maxsize=maxsize) #定义最大队列，必须小于mysql最大连接池数
         mysql = self.mysql_conn()
         f = open(self.BASE_DIR + '/db/' + self.search_name + '.json', 'r')
         count = 0
@@ -60,6 +62,7 @@ class SoftDetailedInfo(object):
                     t.start() #开启线程
                     count += 1
                     ProgressBar(count, total).run()  # 进度条
+                    #continue
                 for t in thread_list:
                     t.join()
             #print('第%s个线程启动完毕...' % count)
